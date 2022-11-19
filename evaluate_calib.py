@@ -64,7 +64,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 @ex.config
 def config():
     dataset = 'kitti/odom'
-    data_folder = '/home/wangshuo/Datasets/KITTI/odometry_color/'
+    # data_folder = '/home/wangshuo/Datasets/KITTI/odometry_color/'
+    data_folder = '/home/mrwang/data/kitti_odometry/dataset'
     test_sequence = 0
     use_prev_output = False
     max_t = 1.5
@@ -91,11 +92,16 @@ def config():
     out_fig_lg = 'EN' # [EN, CN]
 
 weights = [
-   './pretrained/kitti_iter1.tar',
-   './pretrained/kitti_iter2.tar',
-   './pretrained/kitti_iter3.tar',
-   './pretrained/kitti_iter4.tar',
-   './pretrained/kitti_iter5.tar',
+#    './pretrained/kitti_iter1.tar',
+#    './pretrained/kitti_iter2.tar',
+#    './pretrained/kitti_iter3.tar',
+#    './pretrained/kitti_iter4.tar',
+#    './pretrained/kitti_iter5.tar',
+   '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter1.tar',
+   '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter2.tar',
+   '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter3.tar',
+   '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter4.tar',
+   '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter5.tar',
 ]
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
