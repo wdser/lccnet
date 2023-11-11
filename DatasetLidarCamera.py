@@ -175,6 +175,8 @@ class DatasetLidarCameraKittiOdometry(Dataset):
         pc_rot = np.matmul(RT, pc_org.numpy())
         pc_rot = pc_rot.astype(np.float32).copy()
         pc_in = torch.from_numpy(pc_rot)
+        print(pc_rot.shape)
+        print(pc_in.shape)
 
         # pc_rot = np.matmul(RT, pc.T)
         # pc_rot = pc_rot.astype(np.float).T.copy()

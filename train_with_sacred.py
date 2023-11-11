@@ -60,12 +60,12 @@ def config():
     max_t = 0.1 # 1.5, 1.0,  0.5,  0.2,  0.1
     max_r = 1. # 20.0, 10.0, 5.0,  2.0,  1.0
     batch_size = 1 # 240  # 120
-    num_worker = 4
+    num_worker = 1
     network = 'Res_f1'
     optimizer = 'adam'
     resume = True
     # weights = './pretrained/kitti/kitti_iter5.tar'
-    weights = '/home/mrwang/data/kitti_odometry/pretrain/kitti_iter1.tar'
+    weights = '/home/mrwang/data/kitti_odometry/pretrain/kitti_iter5.tar'
     rescale_rot = 1.0
     rescale_transl = 2.0
     precision = "O0"
@@ -77,9 +77,8 @@ def config():
     print_frequency = 50
     starting_epoch = -1
 
-
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'#, 1, 2, 3'
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 EPOCH = 1

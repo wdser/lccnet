@@ -29,7 +29,7 @@ from sacred.utils import apply_backspaces_and_linefeeds
 from skimage import io
 from tqdm import tqdm
 import time
-
+import torch.nn as nn
 from models.LCCNet import LCCNet
 from DatasetLidarCamera import DatasetLidarCameraKittiOdometry
 
@@ -74,7 +74,7 @@ def config():
     occlusion_threshold = 3.0
     network = 'Res_f1'
     norm = 'bn'
-    show = False
+    show = True
     use_reflectance = False
     weight = None  # List of weights' path, for iterative refinement
     save_name = None
@@ -97,14 +97,18 @@ weights = [
 #    './pretrained/kitti_iter3.tar',
 #    './pretrained/kitti_iter4.tar',
 #    './pretrained/kitti_iter5.tar',
-   '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter1.tar',
-   '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter2.tar',
-   '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter3.tar',
-   '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter4.tar',
+#    '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter1.tar',
+#    '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter2.tar',
+#    '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter3.tar',
+#    '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter4.tar',
    '/home/mrwang/data/kitti_odometry/pretrain/kitti_odometry/kitti_iter5.tar',
 ]
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'#, 1, 2, 3'
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("cuda if torch.cuda.is_available() else cpu")
+print(device)
+print(torch.cuda.is_available())
 
 EPOCH = 1
 
@@ -217,8 +221,15 @@ def main(_config, seed):
         saved_state_dict = checkpoint['state_dict']
         model.load_state_dict(saved_state_dict)
         model = model.to(device)
+        # model = nn.DataParallel(model)
+        # model = model.cuda()
+
         model.eval()
         models.append(model)
+    print("---------models---------------")
+    print(len(models))
+    # import pdb
+    # pdb.set_trace()
 
 
     if _config['save_log']:
@@ -411,7 +422,7 @@ def main(_config, seed):
             out1 = overlay_imgs(rgb_input[0], lidar_gt[0].unsqueeze(0))
             cv2.imshow("INPUT", out0[:, :, [2, 1, 0]])
             cv2.imshow("GT", out1[:, :, [2, 1, 0]])
-            cv2.waitKey(1)
+            cv2.waitKey(50)
 
         rgb = rgb_input.to(device)
         lidar = lidar_input.to(device)
@@ -451,6 +462,30 @@ def main(_config, seed):
 
         # Run model
         with torch.no_grad():
+            print("--------ONNX----------")
+            import pdb
+            pdb.set_trace()
+            for iteration in range(start, len(weights)):
+                # ONNX model
+                t1 = time.time()
+                if _config['iterative_method'] == 'single_range' or _config['iterative_method'] == 'single':
+                    T_predicted, R_predicted = models[0](rgb_resize, lidar_resize)
+                elif _config['iterative_method'] == 'multi_range':
+                    input_list = ['rgb_input', 'lidar_input']
+                    output_list = ['T_predicted', 'R_predicted']
+                    print("--------export: " + str(iteration) +"----------")
+                    torch.onnx.export(models[iteration],
+                                      (rgb_resize, lidar_resize),
+                                      "model_"+str(iteration)+".onnx",
+                                      export_params=True, 
+                                      keep_initializers_as_inputs=True,
+                                      opset_version=14,
+                                      verbose=True, 
+                                      input_names=input_list, 
+                                      output_names=output_list)
+            print("--------Run model----------")
+            import pdb
+            pdb.set_trace()
             for iteration in range(start, len(weights)):
                 # Run the i-th network
                 t1 = time.time()
@@ -459,6 +494,7 @@ def main(_config, seed):
                 elif _config['iterative_method'] == 'multi_range':
                     T_predicted, R_predicted = models[iteration](rgb_resize, lidar_resize)
                 run_time = time.time() - t1
+
 
                 if _config['rot_transl_separated'] and iteration == 0:
                     T_predicted = torch.tensor([[0., 0., 0.]], device='cuda')
@@ -505,7 +541,7 @@ def main(_config, seed):
                 if show:
                     out2 = overlay_imgs(rgb_input[0], lidar)
                     cv2.imshow(f'Pred_Iter_{iteration}', out2[:, :, [2, 1, 0]])
-                    cv2.waitKey(1)
+                    cv2.waitKey(50)
 
                 # inv(H_init)*H_pred
                 T_composed = RTs[iteration + 1][:3, 3]
